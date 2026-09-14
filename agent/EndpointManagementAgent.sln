@@ -1,0 +1,25 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EndpointManagementAgent", "src\EndpointManagementAgent\EndpointManagementAgent.csproj", "{6C87A327-88B6-4A78-8686-D36821744B52}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EndpointManagementAgent.Tests", "tests\EndpointManagementAgent.Tests\EndpointManagementAgent.Tests.csproj", "{4D14428A-56CF-4DF8-AFC9-E01F65091899}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6C87A327-88B6-4A78-8686-D36821744B52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C87A327-88B6-4A78-8686-D36821744B52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C87A327-88B6-4A78-8686-D36821744B52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C87A327-88B6-4A78-8686-D36821744B52}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D14428A-56CF-4DF8-AFC9-E01F65091899}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D14428A-56CF-4DF8-AFC9-E01F65091899}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D14428A-56CF-4DF8-AFC9-E01F65091899}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D14428A-56CF-4DF8-AFC9-E01F65091899}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

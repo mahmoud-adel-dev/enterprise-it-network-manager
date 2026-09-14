@@ -1,0 +1,70 @@
+# Dependencies and package-manager state
+/node_modules/
+/.pnpm-store/
+.npm/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js and TypeScript output
+/.next/
+/out/
+/dist/
+*.tsbuildinfo
+next-env.d.ts
+/.turbo/
+/.vercel/
+
+# Tests and reports
+/coverage/
+/test-results/
+/playwright-report/
+/blob-report/
+/.nyc_output/
+
+# Runtime state (never commit inventories, packages, or SQLite files)
+/data/*.sqlite
+/data/*.sqlite-*
+/data/*.db
+/data/*.db-*
+/data/backups/
+/data/packages/
+/data/uploads/
+/logs/
+*.log
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key
+*.pem
+*.jks
+*.keystore
+
+# .NET build and user-specific output
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+/.vs/
+/.vscode/
+/.idea/
+
+# Windows installers and signing output
+/artifacts/
+*.msi
+*.msix
+*.appx
+*.snk
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+

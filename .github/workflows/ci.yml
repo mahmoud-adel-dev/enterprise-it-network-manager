@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-quality:
+    name: Web quality and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_ENV: test
+      DATABASE_PATH: ${{ github.workspace }}/data/ci.sqlite
+      ENDPOINT_MANAGER_MOCK_MODE: 'true'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Create ephemeral CI secret
+        shell: bash
+        run: echo "AUTH_SECRET=$(openssl rand -base64 48 | tr -d '\n')" >> "$GITHUB_ENV"
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify required scripts
+        shell: node {0}
+        run: |
+          const scripts = require('./package.json').scripts ?? {};
+          const required = ['format:check', 'lint', 'typecheck', 'test:unit', 'test:integration', 'build'];
+          const missing = required.filter((name) => !scripts[name]);
+          if (missing.length) {
+            throw new Error(`Missing required package scripts: ${missing.join(', ')}`);
+          }
+
+      - name: Check formatting
+        run: pnpm run format:check
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Type-check
+        run: pnpm run typecheck
+
+      - name: Run unit tests
+        run: pnpm run test:unit
+
+      - name: Run integration tests
+        run: pnpm run test:integration
+
+      - name: Build production application
+        env:
+          NODE_ENV: production
+        run: pnpm run build
+
+  web-e2e:
+    name: Web end-to-end tests
+    needs: web-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_ENV: test
+      DATABASE_PATH: ${{ github.workspace }}/data/e2e.sqlite
+      ENDPOINT_MANAGER_MOCK_MODE: 'true'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Create ephemeral CI secret
+        shell: bash
+        run: echo "AUTH_SECRET=$(openssl rand -base64 48 | tr -d '\n')" >> "$GITHUB_ENV"
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify E2E script
+        shell: node {0}
+        run: |
+          const scripts = require('./package.json').scripts ?? {};
+          if (!scripts['test:e2e']) throw new Error('Missing required package script: test:e2e');
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        run: pnpm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  windows-agent:
+    name: Windows agent build and tests
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Locate agent solution
+        id: agent
+        shell: pwsh
+        run: |
+          $solution = Get-ChildItem -LiteralPath agent -Filter *.sln -File -Recurse | Select-Object -First 1
+          if (-not $solution) { throw 'No .NET solution was found beneath agent/.' }
+          "solution=$($solution.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Restore agent
+        run: dotnet restore "${{ steps.agent.outputs.solution }}" --locked-mode
+
+      - name: Build agent
+        run: dotnet build "${{ steps.agent.outputs.solution }}" --configuration Release --no-restore
+
+      - name: Test agent
+        run: dotnet test "${{ steps.agent.outputs.solution }}" --configuration Release --no-build --logger "trx;LogFileName=agent-tests.trx"
+
+      - name: Upload agent test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-test-results
+          path: agent/**/TestResults/*.trx
+          if-no-files-found: ignore
+          retention-days: 7
