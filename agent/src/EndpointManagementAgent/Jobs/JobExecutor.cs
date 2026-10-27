@@ -210,7 +210,7 @@ public sealed class JobExecutor(
         if (cred == null) return;
 
         var inventory = await inventoryProvider.CollectInventoryAsync(cancellationToken).ConfigureAwait(false);
-        await apiClient.SendHardwareInventoryAsync(new HardwareInventoryRequest(cred.DeviceId, "1.0.0", inventory), cancellationToken).ConfigureAwait(false);
+        await apiClient.SendHardwareInventoryAsync(new HardwareInventoryRequest(cred.DeviceId, Worker.AgentVersion, inventory), cancellationToken).ConfigureAwait(false);
 
         await apiClient.ReportJobStatusAsync(job.Id, new JobStatusRequest(
             LeaseToken: job.LeaseToken,
@@ -224,7 +224,7 @@ public sealed class JobExecutor(
         if (cred == null) return;
 
         var apps = await softwareProvider.CollectInstalledSoftwareAsync(cancellationToken).ConfigureAwait(false);
-        await apiClient.SendSoftwareInventoryAsync(new SoftwareInventoryRequest(cred.DeviceId, "1.0.0", apps, DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
+        await apiClient.SendSoftwareInventoryAsync(new SoftwareInventoryRequest(cred.DeviceId, Worker.AgentVersion, apps, DateTimeOffset.UtcNow), cancellationToken).ConfigureAwait(false);
 
         await apiClient.ReportJobStatusAsync(job.Id, new JobStatusRequest(
             LeaseToken: job.LeaseToken,

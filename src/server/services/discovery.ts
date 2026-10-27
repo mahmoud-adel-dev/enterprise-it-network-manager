@@ -267,11 +267,21 @@ async function probeHostAlive(ip: string): Promise<boolean> {
   // Fallback to ping command
   try {
     const pingArgs = process.platform === 'win32'
-      ? ['-n', '1', '-w', '400', ip]
+      ? ['-n', '1', '-w', '500', ip]
       : process.platform === 'darwin'
         ? ['-c', '1', '-W', '1000', ip]
         : ['-c', '1', '-W', '1', ip];
-    await execFile('ping', pingArgs, { timeout: 1500, windowsHide: true });
+    const { stdout } = await execFile('ping', pingArgs, { timeout: 2000, windowsHide: true });
+    
+    // On Windows, verify that the reply is actually from the target IP and not an unreachable notice
+    if (process.platform === 'win32') {
+      const isUnreachable = stdout.includes('Destination host unreachable') || 
+                            stdout.includes('Request timed out') ||
+                            stdout.includes('General failure');
+      const hasReplyFromTarget = stdout.includes(`Reply from ${ip}:`) && stdout.includes('TTL=');
+      return !isUnreachable && hasReplyFromTarget;
+    }
+
     return true;
   } catch {
     return false;

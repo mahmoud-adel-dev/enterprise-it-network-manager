@@ -1,10 +1,11 @@
 import { listDevices } from '@/server/repositories/devices';
+import { DevicesDataTable } from './devices-data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
   Monitor, Wifi, WifiOff, Clock, Shield, ShieldAlert,
-  Server, AlertTriangle, ChevronLeft, ChevronRight, Search,
+  Server, AlertTriangle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search,
 } from 'lucide-react';
 import { formatBytes, timeAgo } from '@/lib/utils';
 import type { ManagementStatus, OnlineStatus, DomainStatus, ApprovalStatus } from '@/server/db/schema/devices';
@@ -48,6 +49,7 @@ export default async function DevicesPage({
 }: {
   searchParams: Promise<{
     page?: string;
+    pageSize?: string;
     q?: string;
     os?: string;
     status?: string;
@@ -56,7 +58,8 @@ export default async function DevicesPage({
   }>;
 }) {
   const params = await searchParams;
-  const page = parseInt(params.page ?? '1', 10);
+  const pageSize = parseInt(params.pageSize ?? '20', 10) || 20;
+  const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
   const search = params.q;
   const os = params.os;
   const onlineStatus = params.status as OnlineStatus | undefined;
@@ -65,13 +68,45 @@ export default async function DevicesPage({
 
   const result = await listDevices({
     page,
-    pageSize: 50,
+    pageSize,
     search,
     os,
     onlineStatus,
     domainStatus,
     approvalStatus,
   });
+
+  const totalPages = Math.max(1, result.totalPages);
+  const startItem = result.total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endItem = Math.min(page * pageSize, result.total);
+
+  const buildPageUrl = (targetPage: number, targetPageSize: number = pageSize) => {
+    const qp = new URLSearchParams();
+    if (targetPage > 1) qp.set('page', targetPage.toString());
+    if (targetPageSize !== 20) qp.set('pageSize', targetPageSize.toString());
+    if (search) qp.set('q', search);
+    if (os) qp.set('os', os);
+    if (onlineStatus) qp.set('status', onlineStatus);
+    if (domainStatus) qp.set('domain', domainStatus);
+    if (approvalStatus) qp.set('approval', approvalStatus);
+    const qs = qp.toString();
+    return `/devices${qs ? `?${qs}` : ''}`;
+  };
+
+  const getPageNumbers = (current: number, total: number) => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+      return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  };
+
+  const pageNumbers = getPageNumbers(page, totalPages);
 
   return (
     <div className="p-6 space-y-4 max-w-full">
@@ -143,98 +178,135 @@ export default async function DevicesPage({
           <option value="APPROVED">Approved</option>
           <option value="REJECTED">Rejected</option>
         </select>
+        {pageSize !== 20 && <input type="hidden" name="pageSize" value={pageSize} />}
         <Button type="submit" size="sm">Apply</Button>
+        {(search || os || onlineStatus || domainStatus || approvalStatus) && (
+          <Link href="/devices">
+            <Button variant="ghost" size="sm" type="button">Reset</Button>
+          </Link>
+        )}
       </form>
 
-      {/* Table */}
-      <div className="border rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Hostname</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">IP Address</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">OS</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Management</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Domain</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Agent</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Last Seen</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {result.devices.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="text-center py-16 text-muted-foreground">
-                    <Monitor className="size-8 mx-auto mb-2 opacity-30" />
-                    <p>No devices found</p>
-                    <p className="text-xs mt-1">Devices appear when agents enroll or network discovery runs.</p>
-                  </td>
-                </tr>
-              )}
-              {result.devices.map((device) => (
-                <tr key={device.id} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{device.hostname}</div>
-                    {device.fqdn && <div className="text-xs text-muted-foreground">{device.fqdn}</div>}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{device.ipAddress ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <OsBadge classification={device.osClassification} />
-                    {device.osBuild && (
-                      <div className="text-xs text-muted-foreground/70">Build {device.osBuild}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3"><OnlineBadge status={device.onlineStatus} /></td>
-                  <td className="px-4 py-3"><ManagementBadge status={device.managementStatus} /></td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs">
-                      {device.domainName ?? (device.domainStatus === 'WORKGROUP' ? 'Workgroup' : '—')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {device.agentInstalled ? (
-                      <Badge variant="success" className="text-xs">v{device.agentVersion}</Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">No agent</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                    {device.lastSeenAt ? timeAgo(device.lastSeenAt) : 'Never'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/devices/${device.id}`}>
-                      <Button variant="ghost" size="sm">View</Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* TanStack Data Table with Bulk Actions */}
+      <DevicesDataTable
+        devices={result.devices}
+        total={result.total}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+      />
 
-      {/* Pagination */}
-      {result.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {(page - 1) * 50 + 1}–{Math.min(page * 50, result.total)} of {result.total.toLocaleString()}
-          </p>
-          <div className="flex gap-2">
-            {page > 1 && (
-              <Link href={`/devices?page=${page - 1}${search ? `&q=${search}` : ''}`}>
-                <Button variant="outline" size="sm"><ChevronLeft className="size-4" />Previous</Button>
+      {/* Pagination Footer */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3 px-4 border rounded-xl bg-card/40 text-sm">
+        {/* Info & Page Size */}
+        <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-xs sm:text-sm">
+          <div>
+            Showing <span className="font-semibold text-foreground">{startItem}</span>–<span className="font-semibold text-foreground">{endItem}</span> of{' '}
+            <span className="font-semibold text-foreground">{result.total.toLocaleString()}</span> devices
+            <span className="mx-2 text-muted-foreground/40">|</span>
+            الصفحة <span className="font-semibold text-foreground">{page}</span> من <span className="font-semibold text-foreground">{totalPages}</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 border rounded-lg px-2 py-1 bg-background">
+            <span className="text-xs text-muted-foreground">عرض:</span>
+            {[20, 50, 100].map((size) => (
+              <Link
+                key={size}
+                href={buildPageUrl(1, size)}
+                className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                  pageSize === size
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {size}
               </Link>
-            )}
-            {page < result.totalPages && (
-              <Link href={`/devices?page=${page + 1}${search ? `&q=${search}` : ''}`}>
-                <Button variant="outline" size="sm">Next<ChevronRight className="size-4" /></Button>
-              </Link>
-            )}
+            ))}
           </div>
         </div>
-      )}
+
+        {/* Navigation Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            {/* First Page */}
+            <Link
+              href={buildPageUrl(1)}
+              aria-disabled={page <= 1}
+              className={page <= 1 ? 'pointer-events-none opacity-40' : ''}
+              title="First Page"
+            >
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0" disabled={page <= 1}>
+                <ChevronsLeft className="size-4" />
+              </Button>
+            </Link>
+
+            {/* Previous Page */}
+            <Link
+              href={buildPageUrl(page - 1)}
+              aria-disabled={page <= 1}
+              className={page <= 1 ? 'pointer-events-none opacity-40' : ''}
+              title="Previous Page"
+            >
+              <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs" disabled={page <= 1}>
+                <ChevronLeft className="size-4" />
+                <span>السابق</span>
+              </Button>
+            </Link>
+
+            {/* Numbered Buttons */}
+            <div className="flex items-center gap-1 mx-1">
+              {pageNumbers.map((p, idx) => {
+                if (typeof p === 'string') {
+                  return (
+                    <span key={`ellipsis-${idx}`} className="px-1.5 text-xs text-muted-foreground">
+                      …
+                    </span>
+                  );
+                }
+                const isActive = p === page;
+                return (
+                  <Link key={p} href={buildPageUrl(p)}>
+                    <Button
+                      variant={isActive ? 'default' : 'outline'}
+                      size="sm"
+                      className={`h-8 min-w-8 px-2 text-xs font-medium ${
+                        isActive ? 'shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {p}
+                    </Button>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Next Page */}
+            <Link
+              href={buildPageUrl(page + 1)}
+              aria-disabled={page >= totalPages}
+              className={page >= totalPages ? 'pointer-events-none opacity-40' : ''}
+              title="Next Page"
+            >
+              <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs" disabled={page >= totalPages}>
+                <span>التالي</span>
+                <ChevronRight className="size-4" />
+              </Button>
+            </Link>
+
+            {/* Last Page */}
+            <Link
+              href={buildPageUrl(totalPages)}
+              aria-disabled={page >= totalPages}
+              className={page >= totalPages ? 'pointer-events-none opacity-40' : ''}
+              title="Last Page"
+            >
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0" disabled={page >= totalPages}>
+                <ChevronsRight className="size-4" />
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

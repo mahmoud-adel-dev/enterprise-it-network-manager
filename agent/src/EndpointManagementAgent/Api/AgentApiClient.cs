@@ -29,6 +29,11 @@ public sealed class AgentApiClient(IHttpClientFactory httpClientFactory) : IAgen
     public const string HttpClientName = "EndpointManagementApi";
     internal static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
 
+    private static void AttachRequestId(HttpRequestMessage message)
+    {
+        message.Headers.TryAddWithoutValidation("X-Request-Id", Guid.NewGuid().ToString("N"));
+    }
+
     public async Task<EnrollmentResponse> EnrollAsync(string enrollmentToken, EnrollmentRequest request, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(enrollmentToken);
@@ -39,6 +44,7 @@ public sealed class AgentApiClient(IHttpClientFactory httpClientFactory) : IAgen
             Content = JsonContent.Create(request, options: SerializerOptions),
         };
         message.Headers.TryAddWithoutValidation("X-Enrollment-Token", enrollmentToken);
+        AttachRequestId(message);
 
         using var response = await Client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         return await ReadRequiredJsonAsync<EnrollmentResponse>(response, cancellationToken).ConfigureAwait(false);
@@ -50,6 +56,7 @@ public sealed class AgentApiClient(IHttpClientFactory httpClientFactory) : IAgen
         {
             Content = JsonContent.Create(request, options: SerializerOptions),
         };
+        AttachRequestId(message);
         using var response = await Client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         return await ReadRequiredJsonAsync<HeartbeatResponse>(response, cancellationToken).ConfigureAwait(false);
     }
@@ -68,6 +75,7 @@ public sealed class AgentApiClient(IHttpClientFactory httpClientFactory) : IAgen
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Get, $"api/v1/agent/jobs?limit={maximumJobs}");
+        AttachRequestId(request);
         using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         var envelope = await ReadRequiredJsonAsync<AgentJobsResponse>(response, cancellationToken).ConfigureAwait(false);
         return envelope.Jobs;
@@ -89,6 +97,7 @@ public sealed class AgentApiClient(IHttpClientFactory httpClientFactory) : IAgen
         {
             Content = JsonContent.Create(new { }, options: SerializerOptions),
         };
+        AttachRequestId(request);
         using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         return await ReadRequiredJsonAsync<CredentialRotationResponse>(response, cancellationToken).ConfigureAwait(false);
     }
@@ -101,6 +110,7 @@ public sealed class AgentApiClient(IHttpClientFactory httpClientFactory) : IAgen
         {
             Content = JsonContent.Create(body, options: SerializerOptions),
         };
+        AttachRequestId(request);
         using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
@@ -164,7 +174,7 @@ public sealed class AgentApiClient(IHttpClientFactory httpClientFactory) : IAgen
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
-            PropertyNameCaseInsensitive = false,
+            PropertyNameCaseInsensitive = true,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
         };
         options.Converters.Add(new JsonStringEnumConverter());

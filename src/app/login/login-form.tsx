@@ -5,9 +5,10 @@ import { loginAction, type LoginState } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Loader2, LogIn, Monitor } from 'lucide-react';
+import { Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
 import { useLanguage, LanguageToggle } from '@/lib/i18n/language-context';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { BrandLogo } from '@/components/common/brand-logo';
 
 interface LoginFormProps {
   setupComplete?: boolean;
@@ -33,8 +34,8 @@ export function LoginForm({ setupComplete }: LoginFormProps) {
       <div className="w-full max-w-sm">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 mb-4 shadow-sm">
-            <Monitor className="w-7 h-7 text-primary" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <BrandLogo size={52} withGlow />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Endpoint Manager</h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -114,6 +115,30 @@ export function LoginForm({ setupComplete }: LoginFormProps) {
             ? 'للمصرح لهم فقط. يتم تسجيل وحفظ كافة محاولات الدخول في سجلات التدقيق الأمني.'
             : 'Authorized personnel only. All access is logged.'}
         </p>
+
+        {/* Global Platform Copyright */}
+        <div className="mt-8 pt-4 border-t border-border/60 text-center space-y-1.5 font-mono text-xs">
+          <p className="text-foreground font-bold">
+            {isAr ? 'جميع الحقوق محفوظة لدى محمود عادل 2026' : 'All rights reserved to Mahmoud Adel 2026'}
+          </p>
+          <div className="flex items-center justify-center gap-3 text-muted-foreground text-[11px]">
+            <a
+              href="tel:01002840633"
+              className="text-primary hover:underline font-extrabold inline-flex items-center gap-1"
+            >
+              <span>01002840633</span>
+            </a>
+            <span>•</span>
+            <a
+              href="https://wa.me/201002840633"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-emerald-500 font-bold"
+            >
+              {isAr ? 'واتساب' : 'WhatsApp'}
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

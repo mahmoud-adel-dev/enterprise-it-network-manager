@@ -3,11 +3,27 @@ import * as schema from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { Badge } from '@/components/ui/badge';
 import { ShieldCheck, Users, Lock, Key } from 'lucide-react';
-import { ALL_PERMISSIONS, ROLE_PERMISSIONS } from '@/server/auth/rbac';
+import { ALL_PERMISSIONS, ROLE_PERMISSIONS, getUserRoles } from '@/server/auth/rbac';
+import { getSession } from '@/server/auth/session';
+import { redirect } from 'next/navigation';
+import { AccessDenied } from '@/components/ui/access-denied';
 
 export const metadata = { title: 'Roles & Permissions — Endpoint Manager' };
 
 export default async function RolesPage() {
+  const session = await getSession();
+  if (!session) redirect('/login');
+
+  const userRoles = await getUserRoles(session.userId);
+  if (!userRoles.includes('SUPER_ADMIN')) {
+    return (
+      <AccessDenied
+        currentRole={userRoles[0] || 'VIEWER'}
+        requiredRole="SUPER_ADMIN"
+        customMessage="مصفوفة الصلاحيات والأدوار (RBAC Matrix) مخصصة حصرياً لمديري النظام برتبة سوبر أدمن."
+      />
+    );
+  }
   const roles = await db.select().from(schema.roles);
 
   const rolesWithDetails = await Promise.all(

@@ -4,6 +4,7 @@ import { db } from '@/server/db';
 import * as schema from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { getSession } from '@/server/auth/session';
+import { getUserRoles } from '@/server/auth/rbac';
 import { auditAction } from '@/server/services/audit';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
@@ -15,9 +16,40 @@ export interface SettingsResponse {
   generatedToken?: string;
 }
 
-export async function saveSettingsAction(formData: FormData): Promise<SettingsResponse> {
+/**
+ * Strict Super Admin authorization guard for settings mutations.
+ */
+async function verifySuperAdmin(): Promise<
+  | { session: NonNullable<Awaited<ReturnType<typeof getSession>>> }
+  | { error: string }
+> {
   const session = await getSession();
-  if (!session) return { success: false, error: 'Unauthorized.' };
+  if (!session) {
+    return { error: 'غير مصرح: يجب تسجيل الدخول أولاً للقيام بهذا الإجراء.' };
+  }
+
+  const roles = await getUserRoles(session.userId);
+  if (!roles.includes('SUPER_ADMIN')) {
+    await auditAction({
+      action: 'SECURITY_ALERT',
+      userId: session.userId,
+      usernameSnapshot: session.username,
+      resourceType: 'SETTINGS_MUTATION',
+      metadata: {
+        violation: 'NON_SUPER_ADMIN_BLOCKED_SETTINGS_ACTION',
+        roles,
+      },
+    });
+    return { error: 'غير مصرح: هذا الإجراء مخصص حصرياً للمديرين برتبة (سوبر أدمن - SUPER_ADMIN).' };
+  }
+
+  return { session };
+}
+
+export async function saveSettingsAction(formData: FormData): Promise<SettingsResponse> {
+  const auth = await verifySuperAdmin();
+  if ('error' in auth) return { success: false, error: auth.error };
+  const session = auth.session;
 
   const settingsEntries = [
     { key: 'system.session_expiry_days', value: (formData.get('sessionExpiryDays') as string)?.trim() || '7', desc: 'Session expiration duration in days' },
@@ -64,8 +96,9 @@ export async function saveSettingsAction(formData: FormData): Promise<SettingsRe
 }
 
 export async function generateEnrollmentTokenAction(formData: FormData): Promise<SettingsResponse> {
-  const session = await getSession();
-  if (!session) return { success: false, error: 'Unauthorized.' };
+  const auth = await verifySuperAdmin();
+  if ('error' in auth) return { success: false, error: auth.error };
+  const session = auth.session;
 
   const label = (formData.get('label') as string)?.trim() || 'Default Enrollment Key';
   const maxUses = parseInt((formData.get('maxUses') as string) || '100', 10);
@@ -105,8 +138,9 @@ export async function generateEnrollmentTokenAction(formData: FormData): Promise
 }
 
 export async function revokeTokenAction(tokenId: string): Promise<SettingsResponse> {
-  const session = await getSession();
-  if (!session) return { success: false, error: 'Unauthorized.' };
+  const auth = await verifySuperAdmin();
+  if ('error' in auth) return { success: false, error: auth.error };
+  const session = auth.session;
 
   try {
     await db.update(schema.enrollmentTokens).set({ enabled: false }).where(eq(schema.enrollmentTokens.id, tokenId));

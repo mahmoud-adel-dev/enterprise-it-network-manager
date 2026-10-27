@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Server,
   Network,
@@ -9,7 +10,7 @@ import {
   Activity,
   Layers,
   ArrowRight,
-  ChevronRight,
+  ChevronUp,
   Lock,
   Database,
   Cpu,
@@ -22,11 +23,21 @@ import {
   ShieldCheck,
   FileText,
   Key,
+  Zap,
+  Phone,
+  MessageSquare,
 } from 'lucide-react';
-import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { BrandLogo } from '@/components/common/brand-logo';
 import { type Language, i18n } from './landing-i18n';
+import { LandingNavbar } from './landing-navbar';
+import { HeroVisual } from './hero-visual';
 import { InteractiveShowcase } from './interactive-showcase';
+import { BentoFeatures } from './bento-features';
+import { RoiCalculator } from './roi-calculator';
+import { ArchitectureFlow } from './architecture-flow';
+import { FaqSection } from './faq-section';
 import { AgentInstallSnippet } from './terminal-demo';
+import { PlexusBackground } from './plexus-background';
 
 interface LandingPageProps {
   isAuthenticated: boolean;
@@ -36,13 +47,30 @@ interface LandingPageProps {
 
 export function LandingPage({ isAuthenticated, userName, setupDone }: LandingPageProps) {
   const [lang, setLang] = useState<Language>('ar');
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const t = i18n[lang];
 
   // Set page direction according to selected language
   useEffect(() => {
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = lang;
+    try {
+      localStorage.setItem('lang', lang);
+    } catch {}
   }, [lang]);
+
+  // Monitor scroll for back-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className={`min-h-screen bg-background text-foreground selection:bg-primary/20 ${lang === 'ar' ? 'font-sans' : ''}`}>
@@ -60,88 +88,33 @@ export function LandingPage({ isAuthenticated, userName, setupDone }: LandingPag
         </div>
       )}
 
-      {/* 2. Sticky Glassmorphic Navbar */}
-      <header className="sticky top-0 z-50 border-b border-border/80 bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Brand Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary shadow-sm group-hover:bg-primary/20 transition-colors">
-              <Server className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm sm:text-base tracking-tight text-foreground">
-                  Endpoint Manager
-                </span>
-                <span className="hidden sm:inline-block rounded border border-border/80 bg-secondary/80 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
-                  v1.0
-                </span>
-              </div>
-              <p className="text-[10px] text-muted-foreground leading-none">
-                {lang === 'ar' ? 'البنية التحتية والشبكات المؤسسية' : 'Enterprise Infrastructure Core'}
-              </p>
-            </div>
-          </Link>
+      {/* 2. Responsive Sticky Glass Navbar with Mobile Drawer */}
+      <LandingNavbar
+        lang={lang}
+        onToggleLang={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+        isAuthenticated={isAuthenticated}
+        setupDone={setupDone}
+      />
 
-          {/* Nav Links (Desktop) */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-medium text-muted-foreground">
-            <a href="#showcase" className="hover:text-foreground transition-colors">
-              {t.nav.showcase}
-            </a>
-            <a href="#architecture" className="hover:text-foreground transition-colors">
-              {t.nav.architecture}
-            </a>
-            <a href="#deployment" className="hover:text-foreground transition-colors">
-              {t.nav.deployment}
-            </a>
-            <a href="#specs" className="hover:text-foreground transition-colors">
-              {t.nav.specs}
-            </a>
-          </nav>
+      {/* 3. Hero Section (Industrial Engineering Density + Modern SaaS Aesthetics) */}
+      <section className="relative pt-14 sm:pt-20 pb-24 overflow-hidden border-b border-border/80 bg-gradient-to-b from-background via-card/25 to-background shadow-[inset_0_-20px_50px_rgba(0,0,0,0.06)]">
+        {/* Luminous Top Spotlight */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-[400px] bg-gradient-to-b from-primary/15 via-indigo-500/5 to-transparent blur-3xl pointer-events-none z-0" />
 
-          {/* Right Action Buttons */}
-          <div className="flex items-center gap-2.5">
-            {/* Language Switcher */}
-            <button
-              type="button"
-              onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
-              className="flex items-center gap-1.5 rounded-lg border border-border/80 bg-secondary/60 px-2.5 py-1.5 font-mono text-xs text-foreground hover:bg-secondary transition-colors"
-              title={lang === 'ar' ? 'Switch to English' : 'التحويل إلى العربية'}
-            >
-              <Globe className="h-3.5 w-3.5 text-primary" />
-              <span>{lang === 'ar' ? 'EN' : 'العربية'}</span>
-            </button>
+        {/* Vector Plexus Network Illustration Backdrop (matching user design) */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-30 dark:opacity-20 bg-center bg-no-repeat bg-cover z-0"
+          style={{
+            backgroundImage: `url('/images/network-plexus.svg')`,
+          }}
+        />
 
-            {/* Dark / Light Theme Toggle */}
-            <ThemeToggle />
+        {/* Animated Interactive Plexus Canvas (moving nodes & dynamic connecting lines) */}
+        <PlexusBackground />
 
-            {/* Console Auth Button */}
-            {isAuthenticated ? (
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-1.5 font-mono text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
-              >
-                <span>{t.dashboardCta}</span>
-                <ArrowRight className={`h-3.5 w-3.5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="flex items-center gap-2 rounded-lg bg-primary px-3.5 py-1.5 font-mono text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
-              >
-                <span>{t.primaryCta}</span>
-                <ArrowRight className={`h-3.5 w-3.5 ${lang === 'ar' ? 'rotate-180' : ''}`} />
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* 3. Hero Section (Industrial Engineering Density) */}
-      <section className="relative pt-12 pb-16 overflow-hidden border-b border-border/60">
         {/* Fine Technical Grid Background */}
         <div
-          className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.07]"
+          className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] z-0"
           style={{
             backgroundImage: `radial-gradient(var(--foreground) 1px, transparent 1px)`,
             backgroundSize: '24px 24px',
@@ -151,32 +124,52 @@ export function LandingPage({ isAuthenticated, userName, setupDone }: LandingPag
         <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center space-y-6">
             {/* Operational Status Pill */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 font-mono text-xs font-semibold text-emerald-500">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 font-mono text-xs font-bold text-emerald-500 shadow-sm"
+            >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
               <span>{t.badge}</span>
-            </div>
+            </motion.div>
 
-            {/* Main Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.15]">
+            {/* Main Headline with Shimmering Gradient */}
+            <motion.h1
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.18]"
+            >
               {t.titleMain}{' '}
-              <span className="bg-gradient-to-r from-primary via-indigo-400 to-sky-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary via-indigo-400 to-sky-400 bg-clip-text text-transparent">
                 {t.titleHighlight}
               </span>
-            </h1>
+            </motion.h1>
 
             {/* Subtitle */}
-            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
+            <motion.p
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-sm sm:text-base lg:text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto"
+            >
               {t.heroSubtitle}
-            </p>
+            </motion.p>
 
             {/* Primary Action Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="flex flex-wrap items-center justify-center gap-3.5 pt-2"
+            >
               <Link
                 href={isAuthenticated ? '/dashboard' : '/login'}
-                className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-mono text-sm font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-2.5 rounded-2xl bg-primary px-7 py-3.5 font-mono text-sm font-bold text-primary-foreground shadow-xl hover:bg-primary/90 transition-all hover:scale-[1.03] active:scale-[0.98]"
               >
                 <span>{isAuthenticated ? t.dashboardCta : t.primaryCta}</span>
                 <ArrowRight className={`h-4 w-4 ${lang === 'ar' ? 'rotate-180' : ''}`} />
@@ -184,172 +177,134 @@ export function LandingPage({ isAuthenticated, userName, setupDone }: LandingPag
 
               <a
                 href="#showcase"
-                className="flex items-center gap-2 rounded-xl border border-border/80 bg-secondary/80 px-6 py-3 font-mono text-sm font-semibold text-foreground hover:bg-secondary transition-all"
+                className="flex items-center gap-2 rounded-2xl border border-border/80 bg-secondary/80 px-6 py-3.5 font-mono text-sm font-bold text-foreground hover:bg-secondary transition-all hover:scale-[1.02]"
               >
                 <Activity className="h-4 w-4 text-primary" />
                 <span>{t.secondaryCta}</span>
               </a>
-            </div>
+            </motion.div>
+
+            {/* Operator & Customer Avatar Proof Stack */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.35 }}
+              className="flex flex-wrap items-center justify-center gap-3.5 pt-2"
+            >
+              <div className="flex -space-x-2.5 rtl:space-x-reverse">
+                {/* Avatar 1: Mahmoud Adel */}
+                <div
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-primary via-indigo-600 to-cyan-400 text-xs font-bold text-white ring-2 ring-background shadow-md"
+                  title="محمود عادل (Chief Architect)"
+                >
+                  MA
+                </div>
+                {/* Avatar 2: Network Admin */}
+                <div
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 text-xs font-bold text-white ring-2 ring-background shadow-md"
+                  title="مهندس بنية تحتية"
+                >
+                  NA
+                </div>
+                {/* Avatar 3: SysAdmin */}
+                <div
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 text-xs font-bold text-white ring-2 ring-background shadow-md"
+                  title="مسؤول خوادم ودومين"
+                >
+                  SA
+                </div>
+                {/* Avatar 4: SecOps */}
+                <div
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-purple-500 to-pink-600 text-xs font-bold text-white ring-2 ring-background shadow-md"
+                  title="أمن الشبكات والمعلومات"
+                >
+                  SO
+                </div>
+                {/* Avatar 5: Counter */}
+                <div
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-secondary border border-border/80 text-[11px] font-bold text-foreground ring-2 ring-background shadow-md"
+                >
+                  +500
+                </div>
+              </div>
+
+              <div className="text-start rtl:text-right text-xs">
+                <div className="flex items-center gap-1 text-amber-400 text-xs">
+                  {'★'.repeat(5)}
+                  <span className="font-bold text-foreground ml-1 rtl:ml-0 rtl:mr-1 font-mono">5.0</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground font-medium">
+                  {t.footer.heroProofText}
+                </div>
+              </div>
+            </motion.div>
 
             {/* Quick Metrics Ribbon */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-8 border-t border-border/60">
-              <div className="rounded-xl border border-border/70 bg-card/40 p-3.5 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-3.5 pt-8 border-t border-border/60"
+            >
+              <div className="rounded-2xl border border-border/70 bg-card/50 p-4 backdrop-blur-sm hover:border-primary/40 transition-colors">
                 <div className="font-mono text-lg sm:text-xl font-bold text-foreground">
                   {t.metrics.discoverySpeed}
                 </div>
-                <div className="text-[11px] text-muted-foreground">{t.metrics.discoveryLabel}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">{t.metrics.discoveryLabel}</div>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-card/40 p-3.5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-border/70 bg-card/50 p-4 backdrop-blur-sm hover:border-emerald-500/40 transition-colors">
                 <div className="font-mono text-lg sm:text-xl font-bold text-emerald-500">
                   {t.metrics.airgapped}
                 </div>
-                <div className="text-[11px] text-muted-foreground">{t.metrics.airgappedLabel}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">{t.metrics.airgappedLabel}</div>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-card/40 p-3.5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-border/70 bg-card/50 p-4 backdrop-blur-sm hover:border-sky-500/40 transition-colors">
                 <div className="font-mono text-lg sm:text-xl font-bold text-foreground">
                   {t.metrics.agentFootprint}
                 </div>
-                <div className="text-[11px] text-muted-foreground">{t.metrics.agentLabel}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">{t.metrics.agentLabel}</div>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-card/40 p-3.5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-border/70 bg-card/50 p-4 backdrop-blur-sm hover:border-primary/40 transition-colors">
                 <div className="font-mono text-lg sm:text-xl font-bold text-primary">
                   {t.metrics.encryption}
                 </div>
-                <div className="text-[11px] text-muted-foreground">{t.metrics.encryptionLabel}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">{t.metrics.encryptionLabel}</div>
               </div>
-            </div>
+            </motion.div>
           </div>
+
+          {/* 3D High-Fidelity Hero Cockpit Visual */}
+          <HeroVisual lang={lang} />
         </div>
       </section>
 
-      {/* 4. Interactive Live Showcase Centerpiece */}
+      {/* 4. Interactive Live Showcase Simulator */}
       <InteractiveShowcase lang={lang} />
 
-      {/* 5. Core Architecture & Subsystems Deep-Dive */}
-      <section id="architecture" className="py-16 border-t border-border/60 scroll-mt-16 bg-secondary/15">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-xs font-semibold text-primary mb-3">
-              {t.pillars.tag}
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
-              {t.pillars.title}
-            </h2>
-            <p className="mt-3 text-sm sm:text-base text-muted-foreground">
-              {t.pillars.subtitle}
-            </p>
-          </div>
+      {/* 5. Modern Enterprise Bento Grid */}
+      <BentoFeatures lang={lang} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Pillar 1: Layer-2/3 Network Topology */}
-            <div className="rounded-2xl border border-border/80 bg-card/70 p-6 sm:p-8 space-y-4 backdrop-blur-sm hover:border-primary/50 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-                  <Network className="h-5 w-5" />
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-foreground">
-                  {t.pillars.p1Title}
-                </h3>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                {t.pillars.p1Desc}
-              </p>
-              <ul className="space-y-2 pt-2 border-t border-border/60 text-xs font-mono">
-                {t.pillars.p1Points.map((pt, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-foreground/90">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <span>{pt}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      {/* 6. Dynamic ROI & Fleet Efficiency Calculator */}
+      <RoiCalculator lang={lang} />
 
-            {/* Pillar 2: Fleet Telemetry & Lifecycle */}
-            <div className="rounded-2xl border border-border/80 bg-card/70 p-6 sm:p-8 space-y-4 backdrop-blur-sm hover:border-primary/50 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-                  <Monitor className="h-5 w-5" />
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-foreground">
-                  {t.pillars.p2Title}
-                </h3>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                {t.pillars.p2Desc}
-              </p>
-              <ul className="space-y-2 pt-2 border-t border-border/60 text-xs font-mono">
-                {t.pillars.p2Points.map((pt, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-foreground/90">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <span>{pt}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      {/* 7. Interactive LAN Architecture Flow */}
+      <ArchitectureFlow lang={lang} />
 
-            {/* Pillar 3: Active Directory Alignment */}
-            <div className="rounded-2xl border border-border/80 bg-card/70 p-6 sm:p-8 space-y-4 backdrop-blur-sm hover:border-primary/50 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-foreground">
-                  {t.pillars.p3Title}
-                </h3>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                {t.pillars.p3Desc}
-              </p>
-              <ul className="space-y-2 pt-2 border-t border-border/60 text-xs font-mono">
-                {t.pillars.p3Points.map((pt, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-foreground/90">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <span>{pt}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Pillar 4: Silent Software Packaging & Ring Deployments */}
-            <div className="rounded-2xl border border-border/80 bg-card/70 p-6 sm:p-8 space-y-4 backdrop-blur-sm hover:border-primary/50 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-                  <Workflow className="h-5 w-5" />
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-foreground">
-                  {t.pillars.p4Title}
-                </h3>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                {t.pillars.p4Desc}
-              </p>
-              <ul className="space-y-2 pt-2 border-t border-border/60 text-xs font-mono">
-                {t.pillars.p4Points.map((pt, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-foreground/90">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <span>{pt}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. Fleet Agent Deployment Section */}
-      <section id="deployment" className="py-16 border-t border-border/60 scroll-mt-16">
+      {/* 8. Fleet Agent Deployment Section */}
+      <section id="deployment" className="py-20 border-t border-border/60 scroll-mt-16 bg-secondary/10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-xs font-semibold text-primary mb-3">
-              {t.install.tag}
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 font-mono text-xs font-semibold text-primary mb-3">
+              <Terminal className="h-3.5 w-3.5" />
+              <span>{t.install.tag}</span>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
               {t.install.title}
             </h2>
-            <p className="mt-3 text-sm sm:text-base text-muted-foreground">
+            <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
               {t.install.subtitle}
             </p>
           </div>
@@ -360,36 +315,40 @@ export function LandingPage({ isAuthenticated, userName, setupDone }: LandingPag
         </div>
       </section>
 
-      {/* 7. Enterprise Air-Gapped & Security Specifications Table */}
-      <section id="specs" className="py-16 border-t border-border/60 scroll-mt-16 bg-secondary/15">
+      {/* 9. Technical FAQ Accordion Section */}
+      <FaqSection lang={lang} />
+
+      {/* 10. Enterprise Air-Gapped & Security Specifications Table */}
+      <section id="specs" className="py-20 border-t border-border/60 scroll-mt-16 bg-secondary/15">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-xs font-semibold text-primary mb-3">
-              {t.specs.tag}
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 font-mono text-xs font-semibold text-primary mb-3">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>{t.specs.tag}</span>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
               {t.specs.title}
             </h2>
-            <p className="mt-3 text-sm sm:text-base text-muted-foreground">
+            <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
               {t.specs.subtitle}
             </p>
           </div>
 
-          <div className="max-w-5xl mx-auto overflow-x-auto rounded-2xl border border-border/80 bg-card/60 shadow-xl backdrop-blur-md">
-            <table className="w-full text-left font-mono text-xs">
-              <thead className="border-b border-border/80 bg-secondary/50 text-[11px] text-muted-foreground uppercase tracking-wider">
+          <div className="max-w-5xl mx-auto overflow-x-auto rounded-3xl border border-border/80 bg-card/60 shadow-2xl backdrop-blur-md">
+            <table className="w-full text-start font-mono text-xs">
+              <thead className="border-b border-border/80 bg-secondary/60 text-[11px] text-muted-foreground uppercase tracking-wider">
                 <tr>
-                  <th className="py-3.5 px-5">{t.specs.colFeature}</th>
-                  <th className="py-3.5 px-5">{t.specs.colSpec}</th>
-                  <th className="py-3.5 px-5">{t.specs.colAdvantage}</th>
+                  <th className="py-4 px-6 text-start">{t.specs.colFeature}</th>
+                  <th className="py-4 px-6 text-start">{t.specs.colSpec}</th>
+                  <th className="py-4 px-6 text-start">{t.specs.colAdvantage}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
                 {t.specs.rows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-secondary/30 transition-colors">
-                    <td className="py-3.5 px-5 font-bold text-foreground">{row.param}</td>
-                    <td className="py-3.5 px-5 text-primary">{row.spec}</td>
-                    <td className="py-3.5 px-5 text-muted-foreground">{row.advantage}</td>
+                    <td className="py-4 px-6 font-bold text-foreground">{row.param}</td>
+                    <td className="py-4 px-6 text-primary">{row.spec}</td>
+                    <td className="py-4 px-6 text-muted-foreground leading-relaxed">{row.advantage}</td>
                   </tr>
                 ))}
               </tbody>
@@ -398,53 +357,60 @@ export function LandingPage({ isAuthenticated, userName, setupDone }: LandingPag
         </div>
       </section>
 
-      {/* 8. Live System Status Bar */}
-      <div className="border-t border-border/80 bg-card/40 py-3 px-4 font-mono text-xs">
+      {/* 11. Live System Status Bar */}
+      <div className="border-t border-border/80 bg-card/50 py-3.5 px-4 font-mono text-xs">
         <div className="container mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
-              <span className="text-foreground font-medium">{t.footer.systemStatus}</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+              <span className="text-foreground font-semibold">{t.footer.systemStatus}</span>
             </span>
             <span className="hidden sm:inline-block text-border">|</span>
             <span className="hidden sm:inline-block text-muted-foreground">
-              DB: SQLite (WAL Mode) • Fast SSD Local
+              Database: SQLite 3 (WAL Mode Enabled) • Ultra-Fast SSD
             </span>
           </div>
 
           <div className="flex items-center gap-4 text-muted-foreground">
-            <span>Daemon: Worker Pool Online</span>
-            <span>Security: AES-256 GCM</span>
+            <span>Daemon: Worker Pool Active</span>
+            <span className="text-emerald-500 font-bold">100% Air-Gapped Verified</span>
           </div>
         </div>
       </div>
 
-      {/* 9. Industrial Enterprise Footer */}
-      <footer className="border-t border-border/80 bg-background/95 py-12 text-xs">
+      {/* 12. Industrial Enterprise Footer */}
+      <footer className="border-t border-border/80 bg-background/95 py-16 text-xs">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-border/60">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-10 border-b border-border/60">
             {/* Col 1: Brand Info */}
-            <div className="space-y-3 md:col-span-2">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded bg-primary/10 border border-primary/20 text-primary">
-                  <Server className="h-4 w-4" />
+            <div className="space-y-4 md:col-span-2">
+              <div className="flex items-center gap-3">
+                <BrandLogo size={36} withGlow />
+                <div>
+                  <span className="font-extrabold text-base text-foreground block">Endpoint Manager</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">Enterprise Fleet & Network Core</span>
                 </div>
-                <span className="font-bold text-sm text-foreground">Endpoint Manager</span>
               </div>
               <p className="text-muted-foreground max-w-sm leading-relaxed">
                 {t.footer.desc}
               </p>
-              <div className="inline-block rounded border border-border/70 bg-secondary/50 px-2 py-1 font-mono text-[10px] text-muted-foreground">
-                {t.footer.localDeployment}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-secondary/50 px-3 py-1.5 font-mono text-[11px] text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span>{t.footer.localDeployment}</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 font-mono text-[11px] text-primary font-bold">
+                  <span>هندسة وتطوير: محمود عادل</span>
+                </div>
               </div>
             </div>
 
             {/* Col 2: Navigation Links */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="font-mono text-[11px] font-bold text-foreground uppercase tracking-wider">
                 {lang === 'ar' ? 'بوابات النظام' : 'Console Portals'}
               </div>
-              <ul className="space-y-1.5 text-muted-foreground">
+              <ul className="space-y-2 text-muted-foreground">
                 <li>
                   <Link href="/dashboard" className="hover:text-foreground transition-colors">
                     {lang === 'ar' ? 'لوحة المراقبة الرئيسية' : 'Operational Dashboard'}
@@ -469,11 +435,11 @@ export function LandingPage({ isAuthenticated, userName, setupDone }: LandingPag
             </div>
 
             {/* Col 3: Operations & Compliance */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="font-mono text-[11px] font-bold text-foreground uppercase tracking-wider">
                 {lang === 'ar' ? 'التدقيق والأمان' : 'Security & Audit'}
               </div>
-              <ul className="space-y-1.5 text-muted-foreground">
+              <ul className="space-y-2 text-muted-foreground">
                 <li>
                   <Link href="/audit" className="hover:text-foreground transition-colors">
                     {lang === 'ar' ? 'سجل العمليات والتدقيق' : 'Immutable Audit Log'}
@@ -498,16 +464,56 @@ export function LandingPage({ isAuthenticated, userName, setupDone }: LandingPag
             </div>
           </div>
 
-          <div className="pt-8 flex flex-wrap items-center justify-between gap-4 text-muted-foreground font-mono text-[11px]">
-            <div>
-              &copy; {new Date().getFullYear()} Endpoint Manager. {t.footer.allRights}
+          {/* Bottom Copyright & Contact Banner */}
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+            <div className="flex items-center gap-2 font-bold text-foreground text-center sm:text-start">
+              <span>&copy; {new Date().getFullYear()}</span>
+              <span>{lang === 'ar' ? 'جميع الحقوق محفوظة لدى محمود عادل 2026' : 'All rights reserved to Mahmoud Adel 2026'}</span>
+              <span>-</span>
+              <a
+                href="tel:01002840633"
+                className="font-mono text-primary hover:underline font-extrabold inline-flex items-center gap-1"
+                title="اتصال مباشر"
+              >
+                <Phone className="h-3.5 w-3.5" />
+                <span>01002840633</span>
+              </a>
             </div>
-            <div>
-              v1.0.0 Enterprise Edition • Local Air-Gapped Network
+
+            <div className="flex items-center gap-3">
+              <a
+                href="https://wa.me/201002840633"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 font-mono text-xs font-bold text-emerald-500 hover:bg-emerald-500/20 transition-all hover:scale-105"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>{lang === 'ar' ? 'واتساب: 01002840633' : 'WhatsApp: 01002840633'}</span>
+              </a>
+              <span className="text-muted-foreground font-mono text-[11px] hidden md:inline-block">
+                v1.0.0 Enterprise • 100% On-Premises Air-Gapped
+              </span>
             </div>
           </div>
         </div>
       </footer>
+
+      {/* Floating Back-To-Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            type="button"
+            onClick={scrollToTop}
+            className="fixed bottom-6 left-6 z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-border/80 bg-card/90 text-foreground shadow-2xl backdrop-blur-xl hover:bg-secondary hover:border-primary/50 transition-all active:scale-95"
+            aria-label="Scroll to top"
+          >
+            <ChevronUp className="h-5 w-5 text-primary" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

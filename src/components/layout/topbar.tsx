@@ -10,11 +10,12 @@ import { useLanguage, LanguageToggle } from '@/lib/i18n/language-context';
 
 interface TopBarProps {
   session: SessionPayload;
+  userRoles?: string[];
 }
 
-export function TopBar({ session }: TopBarProps) {
+export function TopBar({ session, userRoles = [] }: TopBarProps) {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   // Dynamic breadcrumb translation
   const parts = pathname.split('/').filter(Boolean);
@@ -29,14 +30,24 @@ export function TopBar({ session }: TopBarProps) {
     (t.topbar.pages as Record<string, string>)[rawPage] ||
     rawPage.charAt(0).toUpperCase() + rawPage.slice(1);
 
-  const roleText =
-    (session as { role?: string }).role === 'SUPER_ADMIN' || (session as { role?: string }).role === 'ADMIN'
-      ? t.topbar.roleAdmin
-      : (session as { role?: string }).role === 'OPERATOR'
-      ? t.topbar.roleOperator
-      : (session as { role?: string }).role === 'AUDITOR'
-      ? t.topbar.roleAuditor
-      : t.topbar.roleAdmin;
+  const isAr = lang === 'ar';
+  let roleText = isAr ? 'مستخدم مصرح' : 'Authorized User';
+
+  if (userRoles.includes('SUPER_ADMIN')) {
+    roleText = isAr ? 'سوبر أدمن (Super Admin)' : 'Super Admin';
+  } else if (userRoles.includes('IT_ADMIN')) {
+    roleText = isAr ? 'مدير تكنولوجيا المعلومات' : 'IT Admin';
+  } else if (userRoles.includes('NETWORK_ADMIN')) {
+    roleText = isAr ? 'مدير الشبكات' : 'Network Admin';
+  } else if (userRoles.includes('HELPDESK')) {
+    roleText = isAr ? 'دعم فني' : 'Helpdesk';
+  } else if (userRoles.includes('AUDITOR')) {
+    roleText = isAr ? 'مراجع أمني' : 'Auditor';
+  } else if (userRoles.includes('VIEWER')) {
+    roleText = isAr ? 'مستعرض (صلاحية مقيدة)' : 'Viewer (Restricted)';
+  } else if (userRoles.length > 0) {
+    roleText = userRoles[0]!;
+  }
 
   return (
     <header className="h-14 flex items-center justify-between px-4 sm:px-6 border-b bg-card border-border shrink-0 z-10 transition-colors">

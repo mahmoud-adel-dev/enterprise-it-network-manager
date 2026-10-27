@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/server/auth/session';
-import { isSetupComplete } from '@/server/auth/rbac';
+import { isSetupComplete, getUserRoles } from '@/server/auth/rbac';
 import { AppShell } from '@/components/layout/app-shell';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -10,5 +10,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await getSession();
   if (!session) redirect('/login');
 
-  return <AppShell session={session}>{children}</AppShell>;
+  const userRoles = await getUserRoles(session.userId);
+
+  return <AppShell session={session} userRoles={userRoles}>{children}</AppShell>;
 }

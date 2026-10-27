@@ -1,11 +1,29 @@
 import { db } from '@/server/db';
 import * as schema from '@/server/db/schema';
 import { desc } from 'drizzle-orm';
+import { getSession } from '@/server/auth/session';
+import { redirect } from 'next/navigation';
+import { getUserRoles } from '@/server/auth/rbac';
+import { AccessDenied } from '@/components/ui/access-denied';
 import { SettingsForm } from './settings-form';
 
 export const metadata = { title: 'System Settings — Endpoint Manager' };
 
 export default async function SettingsPage() {
+  const session = await getSession();
+  if (!session) redirect('/login');
+
+  const userRoles = await getUserRoles(session.userId);
+  if (!userRoles.includes('SUPER_ADMIN')) {
+    return (
+      <AccessDenied
+        currentRole={userRoles[0] || 'VIEWER'}
+        requiredRole="SUPER_ADMIN"
+        customMessage="إعدادات النظام العامة وتوليد مفاتيح التسجيل وتهيئة الدليل النشط مخصصة حصرياً للسوبر أدمن."
+      />
+    );
+  }
+
   const allSettings = await db.select().from(schema.appSettings);
   const settingsMap: Record<string, string> = {};
   allSettings.forEach((s) => {

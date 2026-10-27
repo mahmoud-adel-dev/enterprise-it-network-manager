@@ -283,7 +283,7 @@ public sealed class HardwareInventoryProvider(ILogger<HardwareInventoryProvider>
         var domainStatus = "WORKGROUP";
         string? domainName = null;
         var operatingSystem = "Windows";
-        var operatingSystemEdition = "Pro";
+        var operatingSystemEdition = string.Empty;
         var osVersion = Environment.OSVersion.Version.ToString();
         var osBuild = Environment.OSVersion.Version.Build.ToString();
         var architecture = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
@@ -295,7 +295,16 @@ public sealed class HardwareInventoryProvider(ILogger<HardwareInventoryProvider>
             {
                 using (obj)
                 {
-                    operatingSystem = obj["Caption"]?.ToString()?.Trim() ?? operatingSystem;
+                    var caption = obj["Caption"]?.ToString()?.Trim();
+                    if (!string.IsNullOrEmpty(caption))
+                    {
+                        operatingSystem = caption;
+                        if (caption.Contains("Pro", StringComparison.OrdinalIgnoreCase)) operatingSystemEdition = "Pro";
+                        else if (caption.Contains("Enterprise", StringComparison.OrdinalIgnoreCase)) operatingSystemEdition = "Enterprise";
+                        else if (caption.Contains("Home", StringComparison.OrdinalIgnoreCase)) operatingSystemEdition = "Home";
+                        else if (caption.Contains("Server", StringComparison.OrdinalIgnoreCase)) operatingSystemEdition = "Server";
+                    }
+
                     osBuild = obj["BuildNumber"]?.ToString()?.Trim() ?? osBuild;
                     osVersion = obj["Version"]?.ToString()?.Trim() ?? osVersion;
                 }

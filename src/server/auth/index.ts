@@ -93,7 +93,25 @@ export async function authenticateUser(
       userAgent,
       metadata: { reason: 'ACCOUNT_DISABLED' },
     });
-    return { success: false, error: 'Account is disabled.', errorCode: 'ACCOUNT_DISABLED' };
+    return { success: false, error: 'تم تعطيل هذا الحساب من قبل الإدارة.', errorCode: 'ACCOUNT_DISABLED' };
+  }
+
+  // Check plan validity / expiration
+  if (user.planExpiresAt && user.planExpiresAt < new Date()) {
+    await auditAction({
+      action: 'LOGIN_FAILED',
+      userId: user.id,
+      usernameSnapshot: user.username,
+      success: false,
+      sourceIp,
+      userAgent,
+      metadata: { reason: 'PLAN_EXPIRED', planExpiresAt: user.planExpiresAt },
+    });
+    return {
+      success: false,
+      error: 'انتهت فترة صلاحية هذا الحساب (الباقة منتهية). يرجى مراجعة المشرف لتجديد الباقة.',
+      errorCode: 'PLAN_EXPIRED',
+    };
   }
 
   // Check lockout
@@ -179,6 +197,10 @@ export async function createUser(params: {
   password: string;
   roleNames: string[];
   forcePasswordChange?: boolean;
+  planExpiresAt?: Date | null;
+  planName?: string;
+  maxManagedDevices?: number;
+  notes?: string;
   createdByUserId: string;
   sourceIp?: string;
 }): Promise<{ id: string }> {
@@ -192,6 +214,10 @@ export async function createUser(params: {
       email: params.email,
       passwordHash,
       forcePasswordChange: params.forcePasswordChange ?? false,
+      planExpiresAt: params.planExpiresAt ?? null,
+      planName: params.planName ?? 'ENTERPRISE',
+      maxManagedDevices: params.maxManagedDevices ?? 100,
+      notes: params.notes,
     })
     .returning({ id: schema.users.id });
 

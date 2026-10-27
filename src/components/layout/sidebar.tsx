@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useLanguage } from '@/lib/i18n/language-context';
+import { BrandLogo } from '@/components/common/brand-logo';
 
 interface NavItem {
   id: string;
@@ -37,6 +38,7 @@ interface NavItem {
   icon: React.ElementType;
   children?: NavItem[];
   badge?: string;
+  rolesAllowed?: string[];
 }
 
 interface NavSection {
@@ -141,27 +143,60 @@ const navSections: NavSection[] = [
         defaultLabel: 'Reports',
         href: '/reports',
         icon: FileText,
+        rolesAllowed: ['SUPER_ADMIN', 'IT_ADMIN', 'AUDITOR', 'HELPDESK'],
       },
       {
         id: 'auditLogs',
         defaultLabel: 'Audit Logs',
         href: '/audit',
         icon: ScrollText,
+        rolesAllowed: ['SUPER_ADMIN', 'IT_ADMIN', 'AUDITOR'],
       },
       {
         id: 'administration',
         defaultLabel: 'Administration',
         icon: Settings,
         children: [
-          { id: 'users', defaultLabel: 'Users', href: '/admin/users', icon: Users },
-          { id: 'roles', defaultLabel: 'Roles', href: '/admin/roles', icon: ShieldCheck },
-          { id: 'settings', defaultLabel: 'Settings', href: '/admin/settings', icon: Settings },
-          { id: 'systemHealth', defaultLabel: 'System Health', href: '/admin/system-health', icon: Server },
+          { id: 'users', defaultLabel: 'Users', href: '/admin/users', icon: Users, rolesAllowed: ['SUPER_ADMIN'] },
+          { id: 'roles', defaultLabel: 'Roles', href: '/admin/roles', icon: ShieldCheck, rolesAllowed: ['SUPER_ADMIN'] },
+          { id: 'settings', defaultLabel: 'Settings', href: '/admin/settings', icon: Settings, rolesAllowed: ['SUPER_ADMIN'] },
+          { id: 'systemHealth', defaultLabel: 'System Health', href: '/admin/system-health', icon: Server, rolesAllowed: ['SUPER_ADMIN', 'IT_ADMIN'] },
         ],
       },
     ],
   },
 ];
+
+function isItemAllowed(item: NavItem, userRoles: string[]): boolean {
+  if (userRoles.includes('SUPER_ADMIN')) return true;
+
+  if (item.rolesAllowed && item.rolesAllowed.length > 0) {
+    if (!item.rolesAllowed.some((r) => userRoles.includes(r))) {
+      return false;
+    }
+  }
+
+  if (item.children && item.children.length > 0) {
+    const allowedChildren = item.children.filter((child) => isItemAllowed(child, userRoles));
+    return allowedChildren.length > 0;
+  }
+
+  return true;
+}
+
+function filterNavItems(items: NavItem[], userRoles: string[]): NavItem[] {
+  return items
+    .filter((item) => isItemAllowed(item, userRoles))
+    .map((item) => {
+      if (item.children) {
+        return {
+          ...item,
+          children: filterNavItems(item.children, userRoles),
+        };
+      }
+      return item;
+    });
+}
 
 function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }) {
   const pathname = usePathname();
@@ -268,8 +303,19 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  userRoles?: string[];
+}
+
+export function Sidebar({ userRoles = [] }: SidebarProps) {
   const { t } = useLanguage();
+
+  const filteredSections = navSections
+    .map((sec) => ({
+      ...sec,
+      items: filterNavItems(sec.items, userRoles),
+    }))
+    .filter((sec) => sec.items.length > 0);
 
   return (
     <nav
@@ -279,10 +325,7 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-border/70">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-indigo-600 text-primary-foreground shadow-md shadow-primary/20">
-            <Server className="size-4" />
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-          </div>
+          <BrandLogo size={32} withGlow />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-extrabold tracking-tight text-foreground">
@@ -298,7 +341,7 @@ export function Sidebar() {
 
       {/* Nav Sections */}
       <div className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
-        {navSections.map((sec, sIdx) => {
+        {filteredSections.map((sec, sIdx) => {
           const sectionHeader =
             (t.nav as Record<string, string>)[sec.headerId] || sec.defaultHeader;
 
@@ -319,7 +362,7 @@ export function Sidebar() {
 
       {/* Status & Version Footer */}
       <div className="p-3 border-t border-border/70 bg-secondary/20">
-        <div className="rounded-xl border border-border/70 bg-card/60 p-2.5 space-y-1.5">
+        <div className="rounded-xl border border-border/70 bg-card/60 p-2.5 space-y-2">
           <div className="flex items-center justify-between text-[10px] font-mono">
             <span className="flex items-center gap-1.5 text-foreground font-semibold">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -327,9 +370,25 @@ export function Sidebar() {
             </span>
             <span className="text-muted-foreground">Local SQLite</span>
           </div>
-          <p className="text-[10px] text-muted-foreground truncate">
-            {t.brandVersion}
-          </p>
+          <div className="pt-1.5 border-t border-border/50 text-[10px] leading-tight space-y-0.5">
+            <p className="font-bold text-foreground">
+              جميع الحقوق محفوظة لدى محمود عادل 2026
+            </p>
+            <div className="flex items-center gap-2 font-mono text-muted-foreground">
+              <a href="tel:01002840633" className="text-primary hover:underline font-bold">
+                01002840633
+              </a>
+              <span>•</span>
+              <a
+                href="https://wa.me/201002840633"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-emerald-500 font-bold"
+              >
+                واتساب
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </nav>

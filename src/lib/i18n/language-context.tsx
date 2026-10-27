@@ -6,6 +6,7 @@ import { type Language, dashboardTranslations } from './translations';
 
 interface LanguageContextType {
   lang: Language;
+  language: Language;
   setLang: (lang: Language) => void;
   toggleLang: () => void;
   t: typeof dashboardTranslations['ar'];
@@ -47,6 +48,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     lang,
+    language: lang,
     setLang,
     toggleLang,
     t: dashboardTranslations[lang],
@@ -65,6 +67,7 @@ export function useLanguage(): LanguageContextType {
     // Fallback if rendered outside provider (e.g. static tests)
     return {
       lang: 'ar',
+      language: 'ar',
       setLang: () => {},
       toggleLang: () => {},
       t: dashboardTranslations['ar'],

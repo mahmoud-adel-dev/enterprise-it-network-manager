@@ -73,6 +73,7 @@ public sealed class PackageDownloadManager(
                 var buffer = new byte[BufferSize];
                 long totalBytes = 0;
                 int bytesRead;
+                int lastReportedPercent = -1;
 
                 while ((bytesRead = await networkStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
                 {
@@ -83,6 +84,19 @@ public sealed class PackageDownloadManager(
                     if (totalBytes > options.Value.MaxPackageBytes)
                     {
                         throw new InvalidOperationException($"Package exceeded maximum configured size ({options.Value.MaxPackageBytes} bytes).");
+                    }
+
+                    // Report download progress every 10%
+                    if (expectedSize > 0)
+                    {
+                        var currentPercent = (int)(totalBytes * 100 / expectedSize);
+                        var reportPercent = currentPercent / 10 * 10; // Round down to nearest 10
+                        if (reportPercent > lastReportedPercent && reportPercent <= 100)
+                        {
+                            lastReportedPercent = reportPercent;
+                            logger.LogInformation("Package {PackageId} download progress: {Percent}% ({Downloaded}/{Total} bytes)",
+                                packageId, reportPercent, totalBytes, expectedSize);
+                        }
                     }
                 }
 

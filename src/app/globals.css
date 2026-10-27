@@ -97,7 +97,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+    font-family: var(--font-sans), 'Cairo', 'Tajawal', 'Alexandria', 'Segoe UI', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -127,4 +127,62 @@
   .sidebar-accent { background-color: var(--sidebar-accent); }
   .sidebar-accent-fg { color: var(--sidebar-accent-fg); }
   .sidebar-muted { color: var(--sidebar-muted); }
+
+  /* Modern Landing Page Keyframes & Effects */
+  @keyframes radar-sweep {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes float-subtle {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+  }
+
+  @keyframes pulse-halo {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.08); }
+  }
+
+  @keyframes led-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+
+  .animate-radar {
+    animation: radar-sweep 4s linear infinite;
+  }
+
+  .animate-float {
+    animation: float-subtle 4s ease-in-out infinite;
+  }
+
+  .animate-float-delayed {
+    animation: float-subtle 5s ease-in-out 1.5s infinite;
+  }
+
+  .animate-halo {
+    animation: pulse-halo 3s ease-in-out infinite;
+  }
+
+  .animate-led {
+    animation: led-blink 1.2s ease-in-out infinite;
+  }
+
+  .glass-panel {
+    background: color-mix(in oklch, var(--card) 75%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  }
+
+  .glass-card-hover {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glass-card-hover:hover {
+    border-color: color-mix(in oklch, var(--primary) 40%, transparent);
+    box-shadow: 0 12px 30px -10px color-mix(in oklch, var(--primary) 15%, transparent);
+    transform: translateY(-2px);
+  }
 }
+

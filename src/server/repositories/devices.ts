@@ -30,7 +30,7 @@ export interface DeviceListResult {
 export async function listDevices(params: DeviceListParams = {}): Promise<DeviceListResult> {
   const {
     page = 1,
-    pageSize = 50,
+    pageSize = 20,
     search,
     os,
     managementStatus,
@@ -246,5 +246,51 @@ export async function getDeviceAuditTrail(deviceId: string) {
     .where(eq(schema.auditLogs.resourceId, deviceId))
     .orderBy(desc(schema.auditLogs.timestamp))
     .limit(25);
+}
+
+export async function bulkQuarantineDevices(deviceIds: string[]): Promise<void> {
+  if (deviceIds.length === 0) return;
+  await db
+    .update(schema.devices)
+    .set({
+      managementStatus: 'QUARANTINED',
+      updatedAt: new Date(),
+    })
+    .where(inArray(schema.devices.id, deviceIds));
+}
+
+export async function bulkUnquarantineDevices(deviceIds: string[]): Promise<void> {
+  if (deviceIds.length === 0) return;
+  await db
+    .update(schema.devices)
+    .set({
+      managementStatus: 'MANAGED',
+      updatedAt: new Date(),
+    })
+    .where(inArray(schema.devices.id, deviceIds));
+}
+
+export async function bulkBlockDevices(deviceIds: string[]): Promise<void> {
+  if (deviceIds.length === 0) return;
+  await db
+    .update(schema.devices)
+    .set({
+      approvalStatus: 'REJECTED',
+      managementStatus: 'QUARANTINED',
+      updatedAt: new Date(),
+    })
+    .where(inArray(schema.devices.id, deviceIds));
+}
+
+export async function bulkUnblockDevices(deviceIds: string[]): Promise<void> {
+  if (deviceIds.length === 0) return;
+  await db
+    .update(schema.devices)
+    .set({
+      approvalStatus: 'APPROVED',
+      managementStatus: 'MANAGED',
+      updatedAt: new Date(),
+    })
+    .where(inArray(schema.devices.id, deviceIds));
 }
 

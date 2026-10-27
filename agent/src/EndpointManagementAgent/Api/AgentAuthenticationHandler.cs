@@ -11,13 +11,15 @@ public sealed class AgentAuthenticationHandler(
     private readonly object _lock = new();
     private string? _cachedToken;
     private Guid? _cachedDeviceId;
+    private DateTimeOffset? _tokenExpiresAt;
 
-    public void UpdateCachedToken(string token, Guid deviceId)
+    public void UpdateCachedToken(string token, Guid deviceId, DateTimeOffset? expiresAt = null)
     {
         lock (_lock)
         {
             _cachedToken = token;
             _cachedDeviceId = deviceId;
+            _tokenExpiresAt = expiresAt;
         }
     }
 
@@ -27,6 +29,7 @@ public sealed class AgentAuthenticationHandler(
         {
             _cachedToken = null;
             _cachedDeviceId = null;
+            _tokenExpiresAt = null;
         }
     }
 
@@ -39,9 +42,20 @@ public sealed class AgentAuthenticationHandler(
         }
 
         string? token;
+        Guid? deviceId;
         lock (_lock)
         {
+            // Check if cached token has expired (with 60-second safety margin)
+            if (_tokenExpiresAt.HasValue && _tokenExpiresAt.Value <= DateTimeOffset.UtcNow.AddSeconds(60))
+            {
+                logger.LogWarning("Cached access token is expired or expiring soon. Clearing cache to trigger re-enrollment.");
+                _cachedToken = null;
+                _cachedDeviceId = null;
+                _tokenExpiresAt = null;
+            }
+
             token = _cachedToken;
+            deviceId = _cachedDeviceId;
         }
 
         if (string.IsNullOrEmpty(token))
@@ -49,11 +63,21 @@ public sealed class AgentAuthenticationHandler(
             var cred = await credentialStore.LoadAsync(cancellationToken).ConfigureAwait(false);
             if (cred != null)
             {
-                lock (_lock)
+                // Also check loaded credential expiry
+                if (cred.ExpiresAt.HasValue && cred.ExpiresAt.Value <= DateTimeOffset.UtcNow.AddSeconds(60))
                 {
-                    _cachedToken = cred.AccessToken;
-                    _cachedDeviceId = cred.DeviceId;
-                    token = cred.AccessToken;
+                    logger.LogWarning("Stored credential has expired. Device will need to re-enroll.");
+                }
+                else
+                {
+                    lock (_lock)
+                    {
+                        _cachedToken = cred.AccessToken;
+                        _cachedDeviceId = cred.DeviceId;
+                        _tokenExpiresAt = cred.ExpiresAt;
+                        token = cred.AccessToken;
+                        deviceId = cred.DeviceId;
+                    }
                 }
             }
         }
@@ -61,6 +85,11 @@ public sealed class AgentAuthenticationHandler(
         if (!string.IsNullOrEmpty(token))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        if (deviceId.HasValue)
+        {
+            request.Headers.TryAddWithoutValidation("X-Device-Id", deviceId.Value.ToString("D"));
         }
 
         var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);

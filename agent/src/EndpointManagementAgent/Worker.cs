@@ -140,7 +140,13 @@ public sealed class Worker(
             }
         }
 
-        logger.LogInformation("Endpoint Management Agent worker loop stopped gracefully.");
+        if (isolationManager.IsQuarantined)
+        {
+            logger.LogWarning("Agent is shutting down while network isolation is ACTIVE. Quarantine rules will persist until next startup or manual removal.");
+        }
+
+        logger.LogInformation("Endpoint Management Agent worker loop stopped gracefully. Total consecutive failures at shutdown: {Failures}",
+            _consecutiveFailures);
     }
 
     private async Task EnsureEnrolledAsync(CancellationToken cancellationToken)
@@ -150,7 +156,7 @@ public sealed class Worker(
         {
             logger.LogInformation("Existing device enrollment detected. Device ID: {DeviceId}, Agent ID: {AgentId}",
                 _credential.DeviceId, _credential.AgentId);
-            authHandler.UpdateCachedToken(_credential.AccessToken, _credential.DeviceId);
+            authHandler.UpdateCachedToken(_credential.AccessToken, _credential.DeviceId, _credential.ExpiresAt);
             return;
         }
 
@@ -194,7 +200,7 @@ public sealed class Worker(
 
             await credentialStore.SaveAsync(credential, cancellationToken).ConfigureAwait(false);
             _credential = credential;
-            authHandler.UpdateCachedToken(credential.AccessToken, credential.DeviceId);
+            authHandler.UpdateCachedToken(credential.AccessToken, credential.DeviceId, credential.ExpiresAt);
 
             logger.LogInformation("Enrollment SUCCESS! Registered as DeviceId: {DeviceId}, AgentId: {AgentId}",
                 credential.DeviceId, credential.AgentId);
